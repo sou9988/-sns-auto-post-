@@ -43,22 +43,24 @@ def ask_ai(prompt: str, use_search: bool = False) -> dict:
 
 
 def gemini_request(models: list[str], body: dict) -> dict:
-    """候補のモデルを順に試す。廃止されたモデル（404）は飛ばし、混雑時（429/5xx）は待って再挑戦"""
+    """候補のモデルを順に試す。混雑時（429/5xx）は少し待って再挑戦し、
+    それでもだめなモデルや廃止されたモデル（404）は次の候補に切り替える"""
     errors = []
     for model in models:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-        for attempt in range(4):
+        for attempt in range(2):
             r = requests.post(url, headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]}, json=body, timeout=180)
-            if r.status_code in (429, 500, 503):
-                time.sleep(20 * (attempt + 1))
+            if r.status_code in (429, 500, 503) and attempt == 0:
+                time.sleep(30)
                 continue
             break
         if r.ok:
             print(f"（使用モデル: {model}）")
             return r.json()
+        print(f"（{model} は使えませんでした: {r.status_code}）")
         errors.append(f"{model}: {r.status_code} {r.text[:300]}")
-        if r.status_code != 404:
-            break
+        if r.status_code not in (404, 429, 500, 503):
+            break  # キーの間違いなど、モデルを変えても直らないエラー
     raise RuntimeError("Gemini エラー\n" + "\n".join(errors))
 
 

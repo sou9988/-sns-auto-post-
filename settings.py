@@ -46,7 +46,7 @@ TEXT_ENGINE = "gemini"
 
 # 使うAIモデル
 # 先頭から順に試し、使えないモデル（廃止など）は自動で次の候補に切り替えます
-GEMINI_TEXT_MODELS = ["gemini-3.8-flash", "gemini-flash-latest"]
+GEMINI_TEXT_MODELS = ["gemini-3.8-flash", "gemini-flash-latest", "gemini-flash-lite-latest"]
 GEMINI_IMAGE_MODELS = ["gemini-3.1-flash-image", "gemini-3.1-flash-image-preview", "gemini-3.1-flash-lite-image"]
 CLAUDE_MODEL = "claude-opus-5-5"
 
