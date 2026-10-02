@@ -41,6 +41,12 @@ ROOM_STYLE_EXAMPLE = """
 # 株の投稿の最後に必ず付ける注意書き
 STOCK_DISCLAIMER = "※情報提供のみで、投資の勧誘ではありません"
 
+# 面白ネタの写真：
+#   "pixabay"（無料の写真素材・PIXABAY_API_KEY が必要）
+#   "pexels" （無料の写真素材・PEXELS_API_KEY が必要）
+#   "gemini" （AIで生成・有料）
+FUNNY_IMAGE_SOURCE = "pixabay"
+
 # 文章を作るAI： "gemini"（無料枠） または "claude"（有料・ANTHROPIC_API_KEY が必要）
 TEXT_ENGINE = "gemini"
 

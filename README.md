@@ -34,6 +34,11 @@ X・Threads・Instagram に、毎日自動で投稿するしくみです。GitHu
 
 > 文章をClaudeで作りたくなったら：`settings.py` の `TEXT_ENGINE = "gemini"` を `"claude"` に変え、https://console.anthropic.com で取得したキーを **ANTHROPIC_API_KEY** として登録します（有料・月1,500〜3,000円程度）。
 
+### Pixabay（面白ネタの写真・無料）
+1. https://pixabay.com/ja/ で無料アカウントを作成（右上「参加」）
+2. ログインしたまま https://pixabay.com/api/docs/ を開く
+3. ページ途中の「Parameters」の表にある **key** の欄に、あなた専用のキーが表示されています → **PIXABAY_API_KEY**
+
 ### 楽天（商品を選ぶ）
 1. https://webservice.rakuten.co.jp →「アプリID発行」→ **RAKUTEN_APP_ID**
    - アクセスキーも表示された場合は → **RAKUTEN_ACCESS_KEY**

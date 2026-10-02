@@ -40,10 +40,19 @@ def build(slot: str, history: list[dict]) -> dict | None:
 
     elif slot == "funny":
         d = content.ask_ai(content.funny_prompt(history))
-        post["image"] = images.generate(d["image_prompt"], images.IMAGE_DIR / f"{stamp}-funny.jpg")
+        path, credit = images.IMAGE_DIR / f"{stamp}-funny.jpg", ""
+        try:
+            if settings.FUNNY_IMAGE_SOURCE == "gemini":
+                post["image"] = images.generate(d["image_prompt"], path)
+            else:
+                used = {h["photo_id"] for h in history if h.get("photo_id")}
+                post["image"], credit, post["photo_id"] = images.stock_photo(d["photo_query"], path, used)
+        except Exception as e:
+            # 写真が用意できなくても、X・Threads には文章だけで投稿する（Instagram はスキップ）
+            print(f"写真を用意できませんでした。文章だけで投稿します: {str(e)[:200]}")
         post["x"] = platforms.x_fit(d["x_text"])
         post["threads"] = f"{d['long_text']}\n{tags(d['hashtags'], 1)}"
-        post["instagram"] = f"{d['long_text']}\n\n{tags(d['hashtags'], 5)}"
+        post["instagram"] = f"{d['long_text']}\n\n{tags(d['hashtags'], 5)}" + (f"\n\n{credit}" if credit else "")
 
     elif slot == "stock":
         d = content.ask_ai(content.stock_prompt(history), use_search=True)
@@ -146,6 +155,7 @@ def main() -> None:
         "slot": slot,
         "summary": post["summary"],
         **({"item_code": post["item_code"]} if post.get("item_code") else {}),
+        **({"photo_id": post["photo_id"]} if post.get("photo_id") else {}),
     })
     HISTORY.parent.mkdir(exist_ok=True)
     HISTORY.write_text(json.dumps(history[-300:], ensure_ascii=False, indent=1), encoding="utf-8")

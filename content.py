@@ -168,7 +168,8 @@ def funny_prompt(history: list[dict]) -> str:
   "x_text": "X用の本文。全角110文字以内",
   "long_text": "Threads・Instagram用の本文。全角250文字以内",
   "hashtags": ["Instagram用ハッシュタグを3〜5個（#は付けない）"],
-  "image_prompt": "写真の内容を英語で具体的に。リアルな写真風。実在の人物・有名キャラクター・ブランドロゴ・文字は入れない"
+  "photo_query": "写真素材サイトで探すための英語の検索キーワード（1〜3語。例: sleepy cat, rainy window）",
+  "image_prompt": "AIで写真を作る場合の内容を英語で具体的に。リアルな写真風。実在の人物・有名キャラクター・ブランドロゴ・文字は入れない"
 }}"""
 
 

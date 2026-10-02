@@ -1,6 +1,7 @@
 """投稿用の写真を作る・ネット上に置く"""
 import base64
 import os
+import random
 import subprocess
 import time
 from datetime import datetime, timedelta
@@ -51,11 +52,45 @@ def generate(prompt: str, path: Path) -> Path:
     raise RuntimeError(f"画像が返ってきませんでした: {str(res)[:300]}")
 
 
-def from_url(url: str, path: Path) -> Path:
-    """商品写真をダウンロードする"""
+def from_url(url: str, path: Path, pad: bool = True) -> Path:
+    """写真をダウンロードして正方形にする（商品写真は余白付き、それ以外は切り抜き）"""
     r = requests.get(url, timeout=30)
     r.raise_for_status()
-    return _save_square_jpeg(r.content, path, pad=True)
+    return _save_square_jpeg(r.content, path, pad=pad)
+
+
+def _search_pixabay(q: str) -> list[dict]:
+    r = requests.get("https://pixabay.com/api/", timeout=30, params={
+        "key": os.environ["PIXABAY_API_KEY"], "q": q, "image_type": "photo",
+        "safesearch": "true", "per_page": 20, "lang": "en"})
+    if not r.ok:
+        raise RuntimeError(f"Pixabay エラー {r.status_code}: {r.text[:300]}")
+    return [{"id": f"pixabay-{h['id']}", "url": h["largeImageURL"], "credit": f"Photo: {h['user']} / Pixabay"}
+            for h in r.json().get("hits", [])]
+
+
+def _search_pexels(q: str) -> list[dict]:
+    r = requests.get("https://api.pexels.com/v1/search", timeout=30,
+                     headers={"Authorization": os.environ["PEXELS_API_KEY"]},
+                     params={"query": q, "per_page": 20, "orientation": "square"})
+    if not r.ok:
+        raise RuntimeError(f"Pexels エラー {r.status_code}: {r.text[:300]}")
+    return [{"id": f"pexels-{p['id']}", "url": p["src"]["large2x"], "credit": f"Photo: {p['photographer']} / Pexels"}
+            for p in r.json().get("photos", [])]
+
+
+def stock_photo(query: str, path: Path, used_ids: set) -> tuple[Path, str, str]:
+    """無料の写真素材サイトから写真を探す。戻り値: (保存先, クレジット表記, 写真ID)"""
+    search = _search_pexels if settings.FUNNY_IMAGE_SOURCE == "pexels" else _search_pixabay
+    words = query.split()
+    # 見つからなければキーワードを短くして探し直す
+    for q in dict.fromkeys([query, " ".join(words[:2]), words[0] if words else "funny"]):
+        photos = [p for p in search(q) if p["id"] not in used_ids]
+        if photos:
+            p = random.choice(photos[:8])
+            from_url(p["url"], path, pad=False)
+            return path, p["credit"], p["id"]
+    raise RuntimeError(f"「{query}」に合う写真が見つかりませんでした")
 
 
 def _git(*args: str) -> str:
