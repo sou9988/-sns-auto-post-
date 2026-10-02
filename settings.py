@@ -45,8 +45,9 @@ STOCK_DISCLAIMER = "※情報提供のみで、投資の勧誘ではありませ
 TEXT_ENGINE = "gemini"
 
 # 使うAIモデル
-GEMINI_TEXT_MODEL = "gemini-2.5-flash"
-GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
+# 先頭から順に試し、使えないモデル（廃止など）は自動で次の候補に切り替えます
+GEMINI_TEXT_MODELS = ["gemini-3.8-flash", "gemini-flash-latest"]
+GEMINI_IMAGE_MODELS = ["gemini-3.1-flash-image", "gemini-3.1-flash-image-preview", "gemini-3.1-flash-lite-image"]
 CLAUDE_MODEL = "claude-opus-5-5"
 
 # 投稿画像をリポジトリに残す日数（古いものは自動で削除）

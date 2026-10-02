@@ -42,8 +42,27 @@ def ask_ai(prompt: str, use_search: bool = False) -> dict:
     return ask_gemini(prompt, use_search)
 
 
+def gemini_request(models: list[str], body: dict) -> dict:
+    """候補のモデルを順に試す。廃止されたモデル（404）は飛ばし、混雑時（429/5xx）は待って再挑戦"""
+    errors = []
+    for model in models:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+        for attempt in range(4):
+            r = requests.post(url, headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]}, json=body, timeout=180)
+            if r.status_code in (429, 500, 503):
+                time.sleep(20 * (attempt + 1))
+                continue
+            break
+        if r.ok:
+            print(f"（使用モデル: {model}）")
+            return r.json()
+        errors.append(f"{model}: {r.status_code} {r.text[:300]}")
+        if r.status_code != 404:
+            break
+    raise RuntimeError("Gemini エラー\n" + "\n".join(errors))
+
+
 def ask_gemini(prompt: str, use_search: bool = False) -> dict:
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_TEXT_MODEL}:generateContent"
     body = {
         "systemInstruction": {"parts": [{"text": settings.PERSONA}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -51,16 +70,8 @@ def ask_gemini(prompt: str, use_search: bool = False) -> dict:
     if use_search:
         body["tools"] = [{"google_search": {}}]
 
-    for attempt in range(4):
-        r = requests.post(url, headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]}, json=body, timeout=180)
-        if r.status_code in (429, 500, 503):  # 無料枠の混雑時は少し待って再挑戦
-            time.sleep(20 * (attempt + 1))
-            continue
-        break
-    if not r.ok:
-        raise RuntimeError(f"Gemini エラー {r.status_code}: {r.text[:500]}")
-
-    cand = (r.json().get("candidates") or [{}])[0]
+    res = gemini_request(settings.GEMINI_TEXT_MODELS, body)
+    cand = (res.get("candidates") or [{}])[0]
     text = "".join(p.get("text", "") for p in cand.get("content", {}).get("parts", []))
     if not text:
         raise RuntimeError(f"Gemini が文章を返しませんでした（{cand.get('finishReason')}）")

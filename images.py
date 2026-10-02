@@ -37,20 +37,18 @@ def _save_square_jpeg(raw: bytes, path: Path, pad: bool) -> Path:
 
 def generate(prompt: str, path: Path) -> Path:
     """Gemini で写真を生成する"""
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_IMAGE_MODEL}:generateContent"
+    from content import gemini_request
     body = {
         "contents": [{"parts": [{"text": prompt + " Square composition. No text, no letters, no watermark."}]}],
         "generationConfig": {"responseModalities": ["IMAGE"], "imageConfig": {"aspectRatio": "1:1"}},
     }
-    r = requests.post(url, headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]}, json=body, timeout=180)
-    if not r.ok:
-        raise RuntimeError(f"Gemini 画像生成エラー {r.status_code}: {r.text[:300]}")
-    for cand in r.json().get("candidates", []):
+    res = gemini_request(settings.GEMINI_IMAGE_MODELS, body)
+    for cand in res.get("candidates", []):
         for part in cand.get("content", {}).get("parts", []):
             data = part.get("inlineData") or part.get("inline_data")
             if data:
                 return _save_square_jpeg(base64.b64decode(data["data"]), path, pad=False)
-    raise RuntimeError(f"画像が返ってきませんでした: {r.text[:300]}")
+    raise RuntimeError(f"画像が返ってきませんでした: {str(res)[:300]}")
 
 
 def from_url(url: str, path: Path) -> Path:
