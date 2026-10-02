@@ -27,14 +27,12 @@ X・Threads・Instagram に、毎日自動で投稿するしくみです。GitHu
 
 ## 手順2　各サービスのキーを取得する
 
-### Claude（文章を作る）
-1. https://console.anthropic.com にログイン → 「Billing」でクレジットを購入（$10〜で十分）
-2. 「API Keys」→「Create Key」→ 表示されたキーをメモ → **ANTHROPIC_API_KEY**
-
-### Gemini（写真を作る）
+### Gemini（文章・ネット検索・写真を作る）
 1. https://aistudio.google.com にGoogleアカウントでログイン
 2. 「Get API key」→「APIキーを作成」→ **GEMINI_API_KEY**
-3. 画像生成は有料枠の場合があるので、エラーが出たら課金設定（Billing）を有効にしてください
+3. 文章作成とネット検索は無料枠で動きます。写真の生成は無料枠の対象外の場合があるので、写真付き投稿（面白ネタ）でエラーが出たら課金設定（Billing）を有効にしてください（1日2枚で月に数百円程度）
+
+> 文章をClaudeで作りたくなったら：`settings.py` の `TEXT_ENGINE = "gemini"` を `"claude"` に変え、https://console.anthropic.com で取得したキーを **ANTHROPIC_API_KEY** として登録します（有料・月1,500〜3,000円程度）。
 
 ### 楽天（商品を選ぶ）
 1. https://webservice.rakuten.co.jp →「アプリID発行」→ **RAKUTEN_APP_ID**

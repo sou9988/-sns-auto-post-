@@ -1,17 +1,16 @@
-"""Claude で投稿文を作る"""
+"""AI（Gemini または Claude）で投稿文を作る"""
 import json
+import os
 import re
+import time
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-import anthropic
+import requests
 
 import settings
 
 JST = ZoneInfo("Asia/Tokyo")
-WEB_SEARCH = {"type": "web_search_20260209", "name": "web_search", "max_uses": 6}
-
-client = anthropic.Anthropic()
 
 
 def now_jst() -> datetime:
@@ -36,8 +35,44 @@ def _parse_json(text: str) -> dict:
     return json.loads(raw)
 
 
+def ask_ai(prompt: str, use_search: bool = False) -> dict:
+    """投稿案を JSON で書いてもらう。検索した記事の URL は "_sources" に入る"""
+    if settings.TEXT_ENGINE == "claude":
+        return ask_claude(prompt, use_search)
+    return ask_gemini(prompt, use_search)
+
+
+def ask_gemini(prompt: str, use_search: bool = False) -> dict:
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{settings.GEMINI_TEXT_MODEL}:generateContent"
+    body = {
+        "systemInstruction": {"parts": [{"text": settings.PERSONA}]},
+        "contents": [{"role": "user", "parts": [{"text": prompt}]}],
+    }
+    if use_search:
+        body["tools"] = [{"google_search": {}}]
+
+    for attempt in range(4):
+        r = requests.post(url, headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]}, json=body, timeout=180)
+        if r.status_code in (429, 500, 503):  # 無料枠の混雑時は少し待って再挑戦
+            time.sleep(20 * (attempt + 1))
+            continue
+        break
+    if not r.ok:
+        raise RuntimeError(f"Gemini エラー {r.status_code}: {r.text[:500]}")
+
+    cand = (r.json().get("candidates") or [{}])[0]
+    text = "".join(p.get("text", "") for p in cand.get("content", {}).get("parts", []))
+    if not text:
+        raise RuntimeError(f"Gemini が文章を返しませんでした（{cand.get('finishReason')}）")
+    data = _parse_json(text)
+    chunks = cand.get("groundingMetadata", {}).get("groundingChunks", [])
+    data["_sources"] = [c["web"]["uri"] for c in chunks if c.get("web", {}).get("uri")]
+    return data
+
+
 def ask_claude(prompt: str, use_search: bool = False) -> dict:
-    """Claude に投稿案を JSON で書いてもらう"""
+    import anthropic
+    client = anthropic.Anthropic()
     kwargs = dict(
         model=settings.CLAUDE_MODEL,
         max_tokens=16000,
@@ -47,7 +82,7 @@ def ask_claude(prompt: str, use_search: bool = False) -> dict:
         extra_body={"fallbacks": "default"},
     )
     if use_search:
-        kwargs["tools"] = [WEB_SEARCH]
+        kwargs["tools"] = [{"type": "web_search_20260209", "name": "web_search", "max_uses": 6}]
 
     messages = [{"role": "user", "content": prompt}]
     for _ in range(5):
@@ -60,7 +95,21 @@ def ask_claude(prompt: str, use_search: bool = False) -> dict:
     if resp.stop_reason == "refusal":
         raise RuntimeError(f"Claude が作成を断りました: {resp.stop_details}")
     text = "".join(b.text for b in resp.content if b.type == "text")
-    return _parse_json(text)
+    return {**_parse_json(text), "_sources": []}
+
+
+def verified_url(url: str, sources: list[str]) -> str:
+    """出典URLが本当に開けるか確かめる。だめなら検索結果の実URLを使う。どれもだめなら空"""
+    for u in [url, *sources]:
+        if not u:
+            continue
+        try:
+            r = requests.get(u, timeout=15, allow_redirects=True, headers={"User-Agent": "Mozilla/5.0"})
+            if r.ok and "grounding-api-redirect" not in r.url:
+                return r.url
+        except requests.RequestException:
+            pass
+    return ""
 
 
 JSON_RULE = """

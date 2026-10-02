@@ -41,9 +41,13 @@ ROOM_STYLE_EXAMPLE = """
 # 株の投稿の最後に必ず付ける注意書き
 STOCK_DISCLAIMER = "※情報提供のみで、投資の勧誘ではありません"
 
+# 文章を作るAI： "gemini"（無料枠） または "claude"（有料・ANTHROPIC_API_KEY が必要）
+TEXT_ENGINE = "gemini"
+
 # 使うAIモデル
-CLAUDE_MODEL = "claude-opus-5-5"
+GEMINI_TEXT_MODEL = "gemini-2.5-flash"
 GEMINI_IMAGE_MODEL = "gemini-2.5-flash-image"
+CLAUDE_MODEL = "claude-opus-5-5"
 
 # 投稿画像をリポジトリに残す日数（古いものは自動で削除）
 IMAGE_KEEP_DAYS = 7

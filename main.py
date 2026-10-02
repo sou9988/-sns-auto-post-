@@ -32,19 +32,21 @@ def build(slot: str, history: list[dict]) -> dict | None:
     post: dict = {"slot": slot, "image": None}
 
     if slot == "news":
-        d = content.ask_claude(content.news_prompt(history), use_search=True)
-        post["x"] = platforms.x_fit(d["x_text"], f"\n{d['source_url']}")
-        post["threads"] = f"{d['long_text']}\n\n出典：{d['source_name']}\n{d['source_url']}\n{tags(d['hashtags'], 1)}"
+        d = content.ask_ai(content.news_prompt(history), use_search=True)
+        url = content.verified_url(d.get("source_url", ""), d["_sources"])
+        source = f"出典：{d['source_name']}" + (f"\n{url}" if url else "")
+        post["x"] = platforms.x_fit(d["x_text"], f"\n{url or '出典：' + d['source_name']}")
+        post["threads"] = f"{d['long_text']}\n\n{source}\n{tags(d['hashtags'], 1)}"
 
     elif slot == "funny":
-        d = content.ask_claude(content.funny_prompt(history))
+        d = content.ask_ai(content.funny_prompt(history))
         post["image"] = images.generate(d["image_prompt"], images.IMAGE_DIR / f"{stamp}-funny.jpg")
         post["x"] = platforms.x_fit(d["x_text"])
         post["threads"] = f"{d['long_text']}\n{tags(d['hashtags'], 1)}"
         post["instagram"] = f"{d['long_text']}\n\n{tags(d['hashtags'], 5)}"
 
     elif slot == "stock":
-        d = content.ask_claude(content.stock_prompt(history), use_search=True)
+        d = content.ask_ai(content.stock_prompt(history), use_search=True)
         if d.get("skip"):
             return None
         post["x"] = platforms.x_fit(d["x_text"], f"\n{settings.STOCK_DISCLAIMER}")
@@ -53,7 +55,7 @@ def build(slot: str, history: list[dict]) -> dict | None:
     elif slot == "room":
         import rakuten
         item = rakuten.pick_item(history)
-        d = content.ask_claude(content.room_prompt(item))
+        d = content.ask_ai(content.room_prompt(item))
         post["item_code"] = item["code"]
         post["image"] = images.from_url(item["image_url"], images.IMAGE_DIR / f"{stamp}-room.jpg")
         room = f"\n楽天ROOMでも紹介中 {settings.ROOM_URL}" if settings.ROOM_URL else ""
