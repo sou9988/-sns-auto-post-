@@ -93,6 +93,58 @@ def stock_photo(query: str, path: Path, used_ids: set) -> tuple[Path, str, str]:
     raise RuntimeError(f"「{query}」に合う写真が見つかりませんでした")
 
 
+FONT_PATHS = [
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",  # GitHub Actions（post.yml でインストール）
+    "C:/Windows/Fonts/meiryob.ttc",                          # Windows
+]
+
+
+def _font(size: int):
+    from PIL import ImageFont
+    for p in FONT_PATHS:
+        if Path(p).exists():
+            return ImageFont.truetype(p, size)
+    raise RuntimeError("日本語フォントが見つかりません")
+
+
+def _wrap(draw, text: str, font, max_w: int) -> list[str]:
+    lines, cur = [], ""
+    for ch in text:
+        if draw.textlength(cur + ch, font=font) > max_w:
+            lines.append(cur)
+            cur = ch
+        else:
+            cur += ch
+    return lines + [cur] if cur else lines
+
+
+def product_card(catch: str, name: str, path: Path) -> Path:
+    """商品紹介用の画像カード（キャッチコピー＋商品名）を作る"""
+    from PIL import ImageDraw
+    img = Image.new("RGB", (SIZE, SIZE), "#1B2433")
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle((70, 70, SIZE - 70, SIZE - 70), radius=40, fill="#FFFFFF")
+
+    f_tag, f_catch, f_name = _font(40), _font(84), _font(44)
+    d.rounded_rectangle((130, 140, 400, 210), radius=35, fill="#FF9900")
+    d.text((265, 175), "おすすめ", font=f_tag, fill="#FFFFFF", anchor="mm")
+
+    y = 290
+    for line in _wrap(d, catch, f_catch, SIZE - 260)[:3]:
+        d.text((130, y), line, font=f_catch, fill="#1B2433")
+        y += 110
+    y += 30
+    for line in _wrap(d, name, f_name, SIZE - 260)[:3]:
+        d.text((130, y), line, font=f_name, fill="#4B5563")
+        y += 64
+
+    d.text((130, SIZE - 170), "Amazonで「商品名」を検索", font=f_tag, fill="#9CA3AF")
+    d.text((SIZE - 130, SIZE - 170), "#PR", font=f_tag, fill="#9CA3AF", anchor="ra")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    img.save(path, "JPEG", quality=92)
+    return path
+
+
 def _git(*args: str) -> str:
     return subprocess.run(["git", *args], check=True, capture_output=True, text=True).stdout.strip()
 

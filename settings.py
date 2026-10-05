@@ -12,6 +12,10 @@ PERSONA = """
 ・絵文字は1投稿に1〜3個まで
 """
 
+# AmazonアソシエイトのトラッキングID（例: aooni-22）
+# アソシエイト・セントラルの右上に表示されています。空のままだと20時の商品紹介はとばします
+AMAZON_TAG = "a01b8a-22"
+
 # 楽天ROOMのあなたのページURL（例: https://room.rakuten.co.jp/room_xxxxxxxx/items）
 # 空のままでも動きます。入れると投稿に「ROOMでも紹介中」と載せます。
 ROOM_URL = "https://room.rakuten.co.jp/room_aoonichan/items"

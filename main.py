@@ -61,6 +61,23 @@ def build(slot: str, history: list[dict]) -> dict | None:
         post["x"] = platforms.x_fit(d["x_text"], f"\n{settings.STOCK_DISCLAIMER}")
         post["threads"] = f"{d['long_text']}\n\n{settings.STOCK_DISCLAIMER}\n{tags(d['hashtags'], 1)}"
 
+    elif slot == "amazon":
+        import amazon
+        item = amazon.pick_item(history) if settings.AMAZON_TAG else None
+        if not item:
+            print("Amazonのトラッキングかリスト（amazon_items.txt）が未設定なので、商品紹介はスキップします")
+            return None
+        d = content.ask_ai(content.amazon_prompt(item))
+        post["item_code"] = item["code"]
+        try:
+            post["image"] = images.product_card(d["card_catch"], d["short_name"], images.IMAGE_DIR / f"{stamp}-amazon.jpg")
+        except Exception as e:
+            print(f"画像カードを作れませんでした。文章だけで投稿します: {str(e)[:200]}")
+        post["x"] = platforms.x_fit("【PR】" + d["x_text"], f"\n{item['url']}\n#PR")
+        post["threads"] = f"【PR】{d['long_text']}\n\n{item['url']}\n#PR"
+        post["instagram"] = (f"【PR】\n{d['ig_caption']}\n\nAmazonで「{d['short_name']}」と検索してみてください"
+                             f"\n\n#PR {tags(d['hashtags'], 4)}")
+
     elif slot == "room":
         if not os.environ.get("RAKUTEN_APP_ID"):
             print("楽天のキーが未設定なので、楽天ROOMの投稿はスキップします")

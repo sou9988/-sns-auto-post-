@@ -194,6 +194,29 @@ def stock_prompt(history: list[dict]) -> str:
 }}"""
 
 
+def amazon_prompt(item: dict) -> str:
+    return f"""Amazonで買える次の商品を紹介する投稿を作ってください。
+
+商品データ:
+- 商品名: {item['name']}
+- 紹介者のメモ: {item['point'] or '（なし）'}
+
+厳守:
+・使ってよい事実は「商品名」と「紹介者のメモ」に書かれていることだけ。書かれていない機能・数値・評価・ランキングは作らない
+・価格や「セール中」「最安」など、値段に関することは書かない
+・誇張しすぎず、「こんな人に良さそう」という目線で親しみやすく
+{JSON_RULE}
+{{
+  "summary": "投稿内容の一行要約",
+  "x_text": "X用の本文。全角80文字以内。URLは入れない",
+  "long_text": "Threads用の本文。全角250文字以内。URLは入れない",
+  "ig_caption": "Instagram用の本文。全角500文字以内。おすすめポイント→こんな人に、の順で",
+  "card_catch": "画像に大きく入れるキャッチコピー。全角16文字以内",
+  "short_name": "検索しやすい短い商品名（全角20文字以内）",
+  "hashtags": ["Instagram用ハッシュタグを3〜4個（#は付けない、PRは不要）"]
+}}"""
+
+
 def room_prompt(item: dict) -> str:
     return f"""楽天市場の次の商品を紹介する投稿を作ってください。
 
