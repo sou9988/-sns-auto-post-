@@ -173,6 +173,69 @@ def funny_prompt(history: list[dict]) -> str:
 }}"""
 
 
+NICHE_ANGLES = [
+    "あるある（キャンプやゴルフをする人が「わかる！」となること）",
+    "最新の話題（直近1週間でニュースやSNSで話題になっていること）",
+    "豆知識・小ワザ（知っていると得する、意外と知られていないこと）",
+    "季節ネタ（今の時期・今週末ならではの話題）",
+    "どっち派？（2択で意見が分かれる話題）",
+]
+
+
+def niche_prompt(history: list[dict]) -> str:
+    count = sum(1 for h in history if h.get("slot") == "niche")
+    angle = NICHE_ANGLES[count % len(NICHE_ANGLES)]
+    return f"""現在は日本時間 {_today_label()} です。
+「{settings.NICHE}」がテーマのアカウントで、伸びる投稿を1つ作ってください。
+
+今回の切り口: {angle}
+
+手順:
+1. web検索で、{settings.NICHE}について今SNSやニュースで話題になっていること・反応が多い話題を調べる
+   （例：「キャンプ 話題」「ゴルフ ニュース 今週」「キャンプ あるある」「ゴルフ 初心者 悩み」など）
+2. 今回の切り口に合い、多くの人が反応しそうな話題を1つ選ぶ
+3. 下の「伸びる書き方」に沿って書く。最近の投稿と同じ話題は避ける
+
+伸びる書き方:
+{settings.BUZZ_RULES}
+
+最近の投稿:
+{_history_text(history)}
+{JSON_RULE}
+{{
+  "summary": "投稿内容の一行要約（重複防止用）",
+  "x_text": "X用の本文。全角110文字以内",
+  "long_text": "Threads・Instagram用の本文。全角250文字以内。最後は質問で終える",
+  "hashtags": ["1つ目はThreads用のトピック（キャンプ か ゴルフ）。続けてInstagram用を合計5個まで（#は付けない）"],
+  "photo_query": "写真素材サイトで探すための英語の検索キーワード（1〜3語。例: camping tent, golf course）"
+}}"""
+
+
+def trend_prompt(history: list[dict]) -> str:
+    return f"""現在は日本時間 {_today_label()} です。
+今日、日本でいちばん話題になっていることに乗っかった、雑談風の投稿を1つ作ってください。
+
+手順:
+1. web検索で、今日の日本のトレンド（Yahoo!リアルタイム検索、Googleトレンド、ニュースのアクセスランキングなど）を調べる
+2. 明るく、誰でも会話に参加できる話題を1つ選ぶ（事件・事故・災害・政治・特定の人への批判・炎上中の話題は避ける）
+3. {settings.NICHE}に自然につなげられるなら少しだけつなげる（無理につなげなくてよい）
+4. 下の「伸びる書き方」に沿って書く。話題の事実は検索で確認できたことだけ
+
+伸びる書き方:
+{settings.BUZZ_RULES}
+
+最近の投稿:
+{_history_text(history)}
+{JSON_RULE}
+{{
+  "summary": "投稿内容の一行要約（重複防止用）",
+  "x_text": "X用の本文。全角110文字以内",
+  "long_text": "Threads・Instagram用の本文。全角250文字以内。最後は質問で終える",
+  "hashtags": ["1つ目はThreads用のトピック（話題を表す言葉）。続けてInstagram用を合計5個まで（#は付けない）"],
+  "photo_query": "写真素材サイトで探すための英語の検索キーワード（1〜3語）"
+}}"""
+
+
 def stock_prompt(history: list[dict]) -> str:
     return f"""現在は日本時間 {_today_label()} です。今日の日本の株式市場まとめ投稿を作ってください。
 

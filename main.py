@@ -38,11 +38,13 @@ def build(slot: str, history: list[dict]) -> dict | None:
         post["x"] = platforms.x_fit(d["x_text"], f"\n{url or '出典：' + d['source_name']}")
         post["threads"] = f"{d['long_text']}\n\n{source}\n{tags(d['hashtags'], 1)}"
 
-    elif slot == "funny":
-        d = content.ask_ai(content.funny_prompt(history))
-        path, credit = images.IMAGE_DIR / f"{stamp}-funny.jpg", ""
+    elif slot in ("funny", "niche", "trend"):
+        # funny: 面白ネタ / niche: キャンプ・ゴルフの話題（検索あり） / trend: その日のトレンド雑談（検索あり）
+        prompt = {"funny": content.funny_prompt, "niche": content.niche_prompt, "trend": content.trend_prompt}[slot]
+        d = content.ask_ai(prompt(history), use_search=(slot != "funny"))
+        path, credit = images.IMAGE_DIR / f"{stamp}-{slot}.jpg", ""
         try:
-            if settings.FUNNY_IMAGE_SOURCE == "gemini":
+            if settings.FUNNY_IMAGE_SOURCE == "gemini" and d.get("image_prompt"):
                 post["image"] = images.generate(d["image_prompt"], path)
             else:
                 used = {h["photo_id"] for h in history if h.get("photo_id")}
