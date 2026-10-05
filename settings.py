@@ -14,7 +14,7 @@ PERSONA = """
 
 # 楽天ROOMのあなたのページURL（例: https://room.rakuten.co.jp/room_xxxxxxxx/items）
 # 空のままでも動きます。入れると投稿に「ROOMでも紹介中」と載せます。
-ROOM_URL = ""
+ROOM_URL = "https://room.rakuten.co.jp/room_aoonichan/items"
 
 # 楽天ランキングから商品を選ぶジャンル（楽天のジャンルID）
 #   562637 = 家電 / 100026 = パソコン・周辺機器 / 565004 = スマートフォン・タブレット
@@ -40,6 +40,12 @@ ROOM_STYLE_EXAMPLE = """
 
 # 株の投稿の最後に必ず付ける注意書き
 STOCK_DISCLAIMER = "※情報提供のみで、投資の勧誘ではありません"
+
+# 投稿するSNS（False にすると、キーが登録されていても投稿しません）
+# X は2026年から有料（投稿ごとに課金。残高がないと 402 エラー）なので停止中
+X_ENABLED = False
+THREADS_ENABLED = True
+INSTAGRAM_ENABLED = True
 
 # 面白ネタの写真：
 #   "pixabay"（無料の写真素材・PIXABAY_API_KEY が必要）

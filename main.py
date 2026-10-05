@@ -62,6 +62,9 @@ def build(slot: str, history: list[dict]) -> dict | None:
         post["threads"] = f"{d['long_text']}\n\n{settings.STOCK_DISCLAIMER}\n{tags(d['hashtags'], 1)}"
 
     elif slot == "room":
+        if not os.environ.get("RAKUTEN_APP_ID"):
+            print("楽天のキーが未設定なので、楽天ROOMの投稿はスキップします")
+            return None
         import rakuten
         item = rakuten.pick_item(history)
         d = content.ask_ai(content.room_prompt(item))
@@ -128,10 +131,13 @@ def main() -> None:
         return check()
 
     dry_run = os.environ.get("DRY_RUN") == "1"
+    if not dry_run and not (platforms.x_enabled() or platforms.threads_enabled() or platforms.ig_enabled()):
+        print("投稿できるSNSがまだありません（キー未設定、または settings.py で停止中）")
+        return
     history = load_history()
     post = build(slot, history)
     if post is None:
-        print("今日は投稿しません（休場日など）")
+        print("今回は投稿しません（休場日・キー未設定など）")
         return
 
     print("=" * 60)

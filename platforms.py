@@ -7,6 +7,8 @@ from pathlib import Path
 import requests
 from requests_oauthlib import OAuth1
 
+import settings
+
 THREADS_BASE = "https://graph.threads.net/v1.0"
 IG_BASE = os.environ.get("IG_API_BASE", "https://graph.instagram.com/v23.0")
 
@@ -19,7 +21,7 @@ def _check(r: requests.Response, name: str) -> dict:
 
 # ---------------------------------------------------------------- X
 def x_enabled() -> bool:
-    return all(os.environ.get(k) for k in ("X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"))
+    return settings.X_ENABLED and all(os.environ.get(k) for k in ("X_API_KEY", "X_API_SECRET", "X_ACCESS_TOKEN", "X_ACCESS_TOKEN_SECRET"))
 
 
 def x_length(text: str) -> int:
@@ -67,7 +69,7 @@ def _wait_container(base: str, cid: str, token: str, field: str, name: str) -> N
 
 # ---------------------------------------------------------------- Threads
 def threads_enabled() -> bool:
-    return bool(os.environ.get("THREADS_ACCESS_TOKEN"))
+    return settings.THREADS_ENABLED and bool(os.environ.get("THREADS_ACCESS_TOKEN"))
 
 
 def threads_post(text: str, image_url: str | None = None) -> str:
@@ -85,7 +87,7 @@ def threads_post(text: str, image_url: str | None = None) -> str:
 
 # ---------------------------------------------------------------- Instagram
 def ig_enabled() -> bool:
-    return bool(os.environ.get("IG_ACCESS_TOKEN") and os.environ.get("IG_USER_ID"))
+    return settings.INSTAGRAM_ENABLED and bool(os.environ.get("IG_ACCESS_TOKEN") and os.environ.get("IG_USER_ID"))
 
 
 def ig_post(caption: str, image_url: str) -> str:
