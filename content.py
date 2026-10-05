@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 
 import requests
 
+import research
 import settings
 
 JST = ZoneInfo("Asia/Tokyo")
@@ -50,7 +51,8 @@ def gemini_request(models: list[str], body: dict) -> dict:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
         for attempt in range(2):
             r = requests.post(url, headers={"x-goog-api-key": os.environ["GEMINI_API_KEY"]}, json=body, timeout=180)
-            if r.status_code in (429, 500, 503) and attempt == 0:
+            quota_over = r.status_code == 429 and "quota" in r.text.lower()  # 1日の上限：待っても回復しない
+            if r.status_code in (429, 500, 503) and attempt == 0 and not quota_over:
                 time.sleep(30)
                 continue
             break
@@ -173,6 +175,8 @@ def funny_prompt(history: list[dict]) -> str:
 }}"""
 
 
+NICHE_QUERIES = ["キャンプ", "ゴルフ", "アウトドア 新商品"]
+
 NICHE_ANGLES = [
     "あるある（キャンプやゴルフをする人が「わかる！」となること）",
     "最新の話題（直近1週間でニュースやSNSで話題になっていること）",
@@ -190,10 +194,13 @@ def niche_prompt(history: list[dict]) -> str:
 
 今回の切り口: {angle}
 
+直近1週間の {settings.NICHE} 関連ニュースの見出し（Googleニュースより）:
+{research.niche_material(NICHE_QUERIES)}
+
 手順:
-1. web検索で、{settings.NICHE}について今SNSやニュースで話題になっていること・反応が多い話題を調べる
-   （例：「キャンプ 話題」「ゴルフ ニュース 今週」「キャンプ あるある」「ゴルフ 初心者 悩み」など）
-2. 今回の切り口に合い、多くの人が反応しそうな話題を1つ選ぶ
+1. 上の見出しの中から、今回の切り口に合い、多くの人が反応しそうな話題を1つ選ぶ
+   （「あるある」「豆知識」「どっち派？」の切り口なら、見出しを使わず一般的な話題でもよい）
+2. 見出しの話題を使う場合、見出しに書かれている事実だけを使い、書かれていない詳細や数字は作らない
 3. 下の「伸びる書き方」に沿って書く。最近の投稿と同じ話題は避ける
 
 伸びる書き方:
@@ -215,11 +222,14 @@ def trend_prompt(history: list[dict]) -> str:
     return f"""現在は日本時間 {_today_label()} です。
 今日、日本でいちばん話題になっていることに乗っかった、雑談風の投稿を1つ作ってください。
 
+今日、日本で急上昇している検索ワードと関連ニュース（Googleトレンドより）:
+{research.trend_material()}
+
 手順:
-1. web検索で、今日の日本のトレンド（Yahoo!リアルタイム検索、Googleトレンド、ニュースのアクセスランキングなど）を調べる
-2. 明るく、誰でも会話に参加できる話題を1つ選ぶ（事件・事故・災害・政治・特定の人への批判・炎上中の話題は避ける）
-3. {settings.NICHE}に自然につなげられるなら少しだけつなげる（無理につなげなくてよい）
-4. 下の「伸びる書き方」に沿って書く。話題の事実は検索で確認できたことだけ
+1. 上のトレンドの中から、明るく、誰でも会話に参加できる話題を1つ選ぶ
+   （事件・事故・災害・訃報・政治・特定の人への批判・炎上中の話題は避ける）
+2. {settings.NICHE}に自然につなげられるなら少しだけつなげる（無理につなげなくてよい）
+3. 下の「伸びる書き方」に沿って書く。話題の事実は、上の見出しに書かれていることだけを使う
 
 伸びる書き方:
 {settings.BUZZ_RULES}

@@ -39,9 +39,10 @@ def build(slot: str, history: list[dict]) -> dict | None:
         post["threads"] = f"{d['long_text']}\n\n{source}\n{tags(d['hashtags'], 1)}"
 
     elif slot in ("funny", "niche", "trend"):
-        # funny: 面白ネタ / niche: キャンプ・ゴルフの話題（検索あり） / trend: その日のトレンド雑談（検索あり）
+        # funny: 面白ネタ / niche: キャンプ・ゴルフの話題 / trend: その日のトレンド雑談
+        # （niche・trend の話題は research.py が Googleニュース・Googleトレンドから集めて渡す。Geminiの検索は使わない）
         prompt = {"funny": content.funny_prompt, "niche": content.niche_prompt, "trend": content.trend_prompt}[slot]
-        d = content.ask_ai(prompt(history), use_search=(slot != "funny"))
+        d = content.ask_ai(prompt(history))
         path, credit = images.IMAGE_DIR / f"{stamp}-{slot}.jpg", ""
         try:
             if settings.FUNNY_IMAGE_SOURCE == "gemini" and d.get("image_prompt"):
