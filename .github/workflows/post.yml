@@ -3,19 +3,19 @@ name: SNS自動投稿
 on:
   schedule:
     # 時刻は UTC（日本時間 −9時間）。GitHub の混雑で10〜20分ほど遅れることがあります
-    - cron: "30 22 * * *"   # 7:30  ニュース
-    - cron: "0 3 * * *"     # 12:00 面白ネタ
-    - cron: "30 6 * * 1-5"  # 15:30 株（平日のみ）
-    - cron: "0 9 * * *"     # 18:00 ニュース
-    - cron: "0 11 * * *"    # 20:00 楽天ROOM
-    - cron: "30 12 * * *"   # 21:30 面白ネタ
+    - cron: "30 22 * * *"   # 7:30  キャンプ・ゴルフの話題
+    - cron: "0 3 * * *"     # 12:00 今日のトレンド雑談
+    - cron: "30 6 * * *"    # 15:30 キャンプ・ゴルフの話題
+    - cron: "0 9 * * *"     # 18:00 キャンプ・ゴルフの話題
+    - cron: "0 11 * * *"    # 20:00 Amazon商品紹介
+    - cron: "30 12 * * *"   # 21:30 キャンプ・ゴルフの話題
   workflow_dispatch:
     inputs:
       slot:
         description: "投稿の種類"
         type: choice
-        options: [funny, news, stock, room, check]
-        default: funny
+        options: [niche, trend, amazon, funny, news, stock, room, check]
+        default: niche
       dry_run:
         description: "テストモード（投稿しない）"
         type: boolean
@@ -43,12 +43,15 @@ jobs:
         id: slot
         run: |
           case "${{ github.event.schedule }}" in
-            "30 22 * * *"|"0 9 * * *") echo "slot=news" >> "$GITHUB_OUTPUT" ;;
-            "0 3 * * *"|"30 12 * * *") echo "slot=funny" >> "$GITHUB_OUTPUT" ;;
-            "30 6 * * 1-5")            echo "slot=stock" >> "$GITHUB_OUTPUT" ;;
-            "0 11 * * *")              echo "slot=room" >> "$GITHUB_OUTPUT" ;;
+            "0 3 * * *")   echo "slot=trend" >> "$GITHUB_OUTPUT" ;;
+            "0 11 * * *")  echo "slot=amazon" >> "$GITHUB_OUTPUT" ;;
+            "30 22 * * *"|"30 6 * * *"|"0 9 * * *"|"30 12 * * *") echo "slot=niche" >> "$GITHUB_OUTPUT" ;;
             *)                         echo "slot=${{ inputs.slot }}" >> "$GITHUB_OUTPUT" ;;
           esac
+
+      - name: 日本語フォントを入れる（商品紹介の画像カード用）
+        if: steps.slot.outputs.slot == 'amazon'
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq fonts-noto-cjk
 
       - name: 投稿する
         run: |
