@@ -85,6 +85,18 @@ def threads_post(text: str, image_url: str | None = None) -> str:
     return _check(r, "Threads 公開")["id"]
 
 
+def threads_reply(post_id: str, text: str) -> str:
+    """自分の投稿にコメント（返信）を付ける。threads_manage_replies の権限が必要"""
+    token = os.environ["THREADS_ACCESS_TOKEN"]
+    uid = os.environ.get("THREADS_USER_ID") or "me"
+    data = {"media_type": "TEXT", "text": text, "reply_to_id": post_id, "access_token": token}
+    cid = _check(requests.post(f"{THREADS_BASE}/{uid}/threads", data=data, timeout=60), "Threads コメント作成")["id"]
+    _wait_container(THREADS_BASE, cid, token, "status", "Threads コメント")
+    r = requests.post(f"{THREADS_BASE}/{uid}/threads_publish",
+                      data={"creation_id": cid, "access_token": token}, timeout=60)
+    return _check(r, "Threads コメント公開")["id"]
+
+
 # ---------------------------------------------------------------- Instagram
 def ig_enabled() -> bool:
     return settings.INSTAGRAM_ENABLED and bool(os.environ.get("IG_ACCESS_TOKEN") and os.environ.get("IG_USER_ID"))

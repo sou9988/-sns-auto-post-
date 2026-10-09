@@ -39,10 +39,27 @@ def build(slot: str, history: list[dict]) -> dict | None:
         post["threads"] = f"{d['long_text']}\n\n{source}\n{tags(d['hashtags'], 1)}"
 
     elif slot in ("funny", "niche", "trend"):
-        # funny: 面白ネタ / niche: キャンプ・ゴルフの話題 / trend: その日のトレンド雑談
+        # funny: 面白ネタ / niche: キャンプ・ゴルフ・アウトドアのニュース / trend: その日のトレンド雑談
         # （niche・trend の話題は research.py が Googleニュース・Googleトレンドから集めて渡す。Geminiの検索は使わない）
-        prompt = {"funny": content.funny_prompt, "niche": content.niche_prompt, "trend": content.trend_prompt}[slot]
-        d = content.ask_ai(prompt(history))
+        news, source_line = None, ""
+        if slot == "niche":
+            import research
+            used_titles = {h["news_title"] for h in history if h.get("news_title")}
+            items = research.news_items(content.NICHE_QUERIES, used_titles)
+            if items:
+                d = content.ask_ai(content.niche_prompt(history, items))
+                try:
+                    news = items[int(d.get("pick", 0))]
+                except (ValueError, IndexError, TypeError):
+                    news = items[0]
+                post["news_title"] = news["title"]
+                source_line = f"\n\n出典：{news['source']}" if news["source"] else ""
+            else:
+                print("ニュースが見つからなかったので、面白ネタで投稿します")
+                d = content.ask_ai(content.funny_prompt(history))
+        else:
+            prompt = {"funny": content.funny_prompt, "trend": content.trend_prompt}[slot]
+            d = content.ask_ai(prompt(history))
         path, credit = images.IMAGE_DIR / f"{stamp}-{slot}.jpg", ""
         try:
             if settings.FUNNY_IMAGE_SOURCE == "gemini" and d.get("image_prompt"):
@@ -54,8 +71,9 @@ def build(slot: str, history: list[dict]) -> dict | None:
             # 写真が用意できなくても、X・Threads には文章だけで投稿する（Instagram はスキップ）
             print(f"写真を用意できませんでした。文章だけで投稿します: {str(e)[:200]}")
         post["x"] = platforms.x_fit(d["x_text"])
-        post["threads"] = f"{d['long_text']}\n{tags(d['hashtags'], 1)}"
-        post["instagram"] = f"{d['long_text']}\n\n{tags(d['hashtags'], 5)}" + (f"\n\n{credit}" if credit else "")
+        post["threads"] = f"{d['long_text']}{source_line}\n{tags(d['hashtags'], 1)}"
+        post["instagram"] = f"{d['long_text']}{source_line}\n\n{tags(d['hashtags'], 5)}" + (f"\n\n{credit}" if credit else "")
+        post["threads_comment"] = d.get("self_comment", "")
 
     elif slot == "stock":
         d = content.ask_ai(content.stock_prompt(history), use_search=True)
@@ -119,10 +137,19 @@ def publish(post: dict) -> dict[str, str]:
             results[name] = "スキップ（キー未設定）"
             continue
         try:
-            results[name] = f"成功 id={run()}"
+            post_id = run()
+            results[name] = f"成功 id={post_id}"
         except Exception as e:
             traceback.print_exc()
             results[name] = f"失敗: {e}"
+            continue
+        # Threads は、自分の投稿に1件目のコメントを付ける（失敗しても投稿自体は成功扱い）
+        if name == "Threads" and settings.SELF_COMMENT and post.get("threads_comment"):
+            try:
+                platforms.threads_reply(post_id, post["threads_comment"])
+                results["Threadsコメント"] = "成功"
+            except Exception as e:
+                results["Threadsコメント"] = f"スキップ（{str(e)[:150]}）※ threads_manage_replies の権限が必要です"
     return results
 
 
@@ -161,7 +188,7 @@ def main() -> None:
         return
 
     print("=" * 60)
-    for key in ("x", "threads", "instagram"):
+    for key in ("x", "threads", "threads_comment", "instagram"):
         if post.get(key):
             extra = f"（{platforms.x_length(post[key])}/280）" if key == "x" else ""
             print(f"■ {key}{extra}\n{post[key]}\n")
@@ -182,6 +209,7 @@ def main() -> None:
         "summary": post["summary"],
         **({"item_code": post["item_code"]} if post.get("item_code") else {}),
         **({"photo_id": post["photo_id"]} if post.get("photo_id") else {}),
+        **({"news_title": post["news_title"]} if post.get("news_title") else {}),
     })
     HISTORY.parent.mkdir(exist_ok=True)
     HISTORY.write_text(json.dumps(history[-300:], ensure_ascii=False, indent=1), encoding="utf-8")
